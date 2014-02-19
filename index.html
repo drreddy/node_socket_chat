@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Intelectual Chat</title>
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+</head>
+<body>
+	<div class="chat">
+		<input type="text" class="chat-name" placeholder="Enter your Name" />
+		<div class="chat-messages"></div>
+		<textarea placeholder="enter you message"></textarea>
+		<div class="chat-status">Status: <span>Idle</span></div>
+	</div>
+</body>
+
+<!--
+
+in below script url localhost is being used
+
+if custom url then it should be used
+
+-->
+
+<script type="text/javascript" src="http://127.0.0.1:8080/socket.io/socket.io.js"></script>
+
+<script type="text/javascript">
+	(function(){
+		var getNode = function(s){
+			return document.querySelector(s);
+		},
+
+		//required nodes
+		textarea = getNode('.chat textarea');
+		chatName = getNode('.chat-name');
+		messages = getNode('.chat-messages');
+		status = getNode('.chat-status span');
+
+		statusDefault = status.textContent;
+
+		setStatus = function(s){
+			status.textContent = s;
+
+			if(s !== statusDefault){
+				var delay = setTimeout(function(){
+					setStatus(statusDefault);
+					clearInterval(delay);
+				}, 2000);
+			}
+		};
+
+		try{
+			var socket = io.connect("http://127.0.0.1:8080");
+		} catch(e) {
+
+		}
+
+		if(socket !== undefined){
+
+			//listening for enter pressing
+			textarea.addEventListener('keydown', function(event){
+				var self = this,
+					name = chatName.value;
+
+				if(event.which === 13 && event.shiftKey === false){
+					socket.emit('input', {
+						name: name,
+						message: self.value
+					});
+
+					event.preventDefault();
+				}
+			});
+
+			//status emit
+			socket.on('status', function(data){
+				setStatus((typeof data === 'object') ? data.message : data);
+
+				if(data.clear === true) {
+					textarea.value = '';
+				}
+			});
+
+			//listen for output from db
+			socket.on('output', function(data){
+				if(data.length){
+
+					//looping through results
+					for(var x = 0; x < data.length; x = x + 1 ) {
+
+						var message = document.createElement('div')	;
+						if(data[x].name === chatName) {
+
+							message.setAttribute('class', 'chat-message right');
+							message.textContent = 'You : ' + data[x].message ;
+
+						} else {
+
+							message.setAttribute('class', 'chat-message');
+							message.textContent = data[x].name + ': ' + data[x].message ;
+
+						}
+
+						//append
+						messages.appendChild(message);
+						messages.insertBefore(message, messages.firstChild);
+
+					}
+				}
+			});
+		}
+
+	})();
+
+</script>
+
+</html>
